@@ -1,0 +1,72 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(data.table)
+library(ggplot2); theme_set(theme_bw(base_size = 20))
+library(prophet)
+library(ggpubr)
+library(ggsci)
+```
+
+
+
+```{r}
+covid.a <- read_csv("~/Documents/data/ph244/data-proj-4a.csv")
+```
+```{r}
+confirmed.cases <- covid.a %>% 
+  filter(Country_Region == "China" |  Country_Region == "India" | Country_Region == "US")%>% 
+  group_by(Date, Country_Region) %>% 
+  summarize(total = sum(ConfirmedCases)) %>% 
+  rename(ds = Date, y = total)
+
+cases.plot <- ggplot(data = US.cases) + 
+  geom_line(aes(x = ds, y = y, color = Country_Region), size = 1.5) +
+  labs(x = "Date", 
+       y = "Confirmed Cases") + 
+  scale_y_continuous(labels = scales::comma) + 
+  scale_color_lancet() + 
+  theme(legend.position = "bottom",
+        legend.title=element_blank(),
+        axis.text.x = element_text(angle = -45))
+
+confirmed.deaths <- covid.a %>% 
+  filter(Country_Region == "China" |  Country_Region == "India" | Country_Region == "US")%>% 
+  group_by(Date, Country_Region) %>% 
+  summarize(total = sum(Fatalities)) %>% 
+  rename(ds = Date, y = total)
+
+fatilities.plot <- ggplot(data = confirmed.deaths) + 
+  geom_line(aes(x = ds, y = y, color = Country_Region), size = 1.5) +
+  labs(x = "Date", 
+       y = "Fatilities") + 
+  scale_y_continuous(labels = scales::comma) + 
+  scale_color_lancet() + 
+  theme(legend.position = "bottom",
+        legend.title=element_blank(),
+        legend.text=element_text(size=12),
+        axis.text.x = element_text(angle = -45))
+
+
+covid.figure <- ggarrange(cases.plot, fatilities.plot, common.legend = T, legend = "bottom")
+
+
+covid.figure <- annotate_figure(covid.figure, top  = text_grob("Covid-19 Confirmed Cases and Fatilites", size = 25))
+
+ggsave(plot = covid.figure, filename = "figures/covid_3county_comparison.png", width = 10, height = 7)
+```
+
+
+
+
+
+
+
+
+
+
+
+

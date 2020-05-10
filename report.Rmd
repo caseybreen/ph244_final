@@ -1,0 +1,44 @@
+---
+header-includes:
+- \usepackage{fancyhdr}
+- \pagestyle{fancy}
+- \usepackage{wrapfig}
+- \lhead{Casey Breen}
+- \rhead{PH244}
+- \usepackage{subfig}
+- \usepackage{adjustbox}
+output: pdf_document
+mainfont: Times New Roman
+fontsize: 11pt
+---
+
+\begin{center}{\textbf{Project 4: Covid 19 Forecasting}}
+\end{center}
+
+\textbf{Summary:}  \newline
+\textbf{Winning Competition Methods:} \newline
+\textbf{Data Cleaning:} \newline
+\textbf{Model Building:}  \newline 
+\textbf{Variable Selection:} \newline
+\textbf{Linear Model:} \newline
+\textbf{GBM:}  \newline
+\textbf{Model Performance:} T \newline
+\textbf{Proposed Question:}\newline
+\textbf{Findings:}
+
+<!-- \begin{figure} -->
+<!--   \centering -->
+<!--   \subfloat[\label{fig:tp01}]{\includegraphics[width=5.5in]{var_importance.png}} -->
+<!--   \caption{Relative variable importance for two predictive models} -->
+<!--   \label{fig:tp} -->
+<!-- \end{figure} -->
+
+\textbf{Conclusion:} Better predictive models for identifying how many days a patient will spend in the hospital in the future allows health care providers to allocate available resources more effectively for better patient care delivery. We demonstrate that ensemble machine learning methods, such as GBM, can effectively use patient data to accurately predict future length of stay in the hospital. Further, we identified the most important predictors of longer hospital stays in the future; the number of times an individual visits the emergency room and inpatient group place-of-service are strongly associated with futre length of hospital stay. In tandem, these analyses allow health care providers to better plan for the future by identifying patients most at risk of returning to the hospital for longer stays. 
+
+\begin{footnotesize}
+Citations: 
+[1] Heritage Health Prize Contest Data. ForeverData.org. Collection 1015. November 2013.
+[2] Kuhn, M. (2008). Building Predictive Models in R Using the caret Package. Journal of Statistical Software, 28(5), 1 - 26.
+[3] Turgeman, Lior, Jerrold H. May, and Roberta Sciulli. "Insights from a machine learning model for predicting the hospital Length of Stay (LOS) at the time of admission." Expert Systems with Applications 78 (2017): 376-385.
+
+\end{footnotesize}

@@ -1,0 +1,82 @@
+---
+title: "Feature Engineering"
+output: html_notebook
+---
+
+Summary: In this notebook, I engineer two features to help with covid 19 predictions:
+
+- days since first case
+- days since first fatility
+
+```{r}
+library(data.table)
+library(tidyverse); theme_set(theme_bw(base_size = 20))
+library(prophet)
+library(ggpubr)
+library(ggsci)
+```
+
+
+
+```{r}
+covid.a <- read_csv("~/Documents/data/ph244/data-proj-4a.csv")
+```
+
+```{r}
+first_confirmed_case <- covid.a %>% 
+  filter(ConfirmedCases > 0) %>% 
+  group_by(Country_Region, Province_State) %>% 
+  summarize(first_confirmed_case = min(Date))
+
+first_confirmed_fatility <- covid.a %>% 
+  filter(Fatalities > 0) %>% 
+  group_by(Country_Region, Province_State) %>% 
+  summarize(first_confirmed_fatility = min(Date))
+
+
+covid.a <- covid.a %>% 
+  left_join(first_confirmed_case) %>% 
+  left_join(first_confirmed_fatility)
+```
+
+
+```{r}
+covid.a <-  covid.a %>% 
+  mutate(days_since_first_case =  as.numeric(Date - first_confirmed_case)) %>% 
+  mutate(days_since_first_fatility =  as.numeric(Date - first_confirmed_fatility)) %>% 
+  mutate(geo = paste(Country_Region, Province_State, sep = "_")) %>% 
+  mutate(days_since_first_case = case_when(
+    days_since_first_case < 0 |is.na(days_since_first_fatility) ~ 0, 
+    TRUE ~ days_since_first_case
+  )) %>% 
+  mutate(days_since_first_fatility = case_when(
+    days_since_first_fatility < 0 | is.na(days_since_first_fatility) ~ 0, 
+    TRUE ~ days_since_first_fatility
+  ))
+
+
+train <- covid.a %>% 
+  filter(Date < "2020-03-18") %>% 
+  select(-Province_State)
+
+test <- covid.a %>% 
+  filter(Date >= "2020-03-18") %>% 
+  select(geo, Date, days_since_first_case)
+
+```
+
+```{r}
+glm_1 <- lm(
+  ConfirmedCases ~ days_since_first_case + geo, 
+  data = train)
+
+test$Pred_1 <- predict(glm_1, test, type = "response") 
+```
+
+
+
+
+
+
+
+

@@ -1,0 +1,133 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(data.table)
+library(tidyverse)
+library(broom)
+library(caret)
+library(maps)
+library(viridis)
+```
+
+
+```{r}
+nyt.data <- fread("~/Documents/data/ph244/us-states-nyt.txt")
+```
+
+```{r}
+nyt.data.tabulated <- nyt.data %>% 
+  mutate(date = as.Date(date)) %>% 
+  filter(deaths > 0) %>% 
+  group_by(state) %>% 
+  summarize(first_confirmed_case = as.numeric(max(date)) - as.numeric(min(date)), deaths = sum(deaths)) 
+```
+
+```{r}
+set.seed(255) 
+
+dataset <- contextual_vars %>% 
+  inner_join(nyt.data.tabulated) %>% 
+  mutate(mortality_rate = deaths/pop) %>% 
+  drop_na()
+
+```
+
+
+
+```{r}
+fitControl <- trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           ## repeated ten times
+                           repeats = 1)
+
+gbmFit1 <- train(mortality_rate ~ frac_service_industry + frac_over_65 + frac_black  + first_confirmed_case + frac_hispan + frac_highschool + frac_unemployed, 
+                 data = dataset, 
+                 method = "lm", 
+                 trControl = fitControl,
+                 verbose = FALSE)
+
+
+test <- caret::varImp(gbmFit1, scale = F)
+
+var.imp.plot <- plot(test, top = 7, main="Variable Importance")
+
+save(var.imp.plot, file = "figures/variable_importance")
+```
+
+
+```{r}
+prediction <- predict(model1, newdata = test)
+```
+
+```{r}
+test <- test %>% 
+  mutate(pred = prediction)
+```
+
+```{r}
+test %>% 
+  mutate(resid = deaths - pred) %>%
+ggplot() + 
+  geom_point(aes(x = deaths, y = resid))
+```
+
+
+```{r}
+test %>% 
+  ggplot() + 
+  geom_point(aes(x = pred, y = deaths))
+```
+
+```{r}
+theme_map <- function(base_size=9, base_family="") {
+    require(grid)
+    theme_bw(base_size=base_size, base_family=base_family) %+replace%
+        theme(axis.line=element_blank(),
+              axis.text=element_blank(),
+              axis.ticks=element_blank(),
+              axis.title=element_blank(),
+              panel.background=element_blank(),
+              panel.border=element_blank(),
+              panel.grid=element_blank(),
+              panel.spacing=unit(0, "lines"),
+              plot.background=element_blank(),
+              legend.justification = c(0,0),
+              legend.position = c(0,0)
+              )
+}
+```
+
+
+
+```{r}
+map.df <- dataset %>% 
+  mutate(region = tolower(state)) %>% 
+  select(region, mortality_rate)
+
+us_states <- map_data("state") %>% 
+  left_join(map.df, by = "region")
+
+
+p <- ggplot(data = us_states,
+            aes(x = long, y = lat,
+                group = group, fill = mortality_rate))
+
+covid.map <- p + geom_polygon(color = "gray90", size = 0.1) +
+    coord_map(projection = "albers", lat0 = 39, lat1 = 45) + 
+    theme_map() + 
+    scale_fill_viridis() +
+    labs(title = "Mortality Rate of COVID-19 in the United States") + 
+    theme(plot.title  = element_text(size=22))
+   
+  
+ggsave(covid.map, filename = "figures/covid_map.png")
+```
+
+
+
+
+

@@ -1,0 +1,136 @@
+---
+title: "Original Question"
+output: html_notebook
+---
+
+```{r}
+library(ipumsr)
+library(data.table)
+```
+ 
+
+```{r}
+acs <- read_csv("~/Documents/data/ph244/usa_00030.csv")
+
+ddi <- ipumsr::read_ipums_ddi("~/Documents/data/ph244/usa_00030.xml")
+
+acs <- ipumsr::ipums_collect(acs, ddi)
+```
+
+
+
+```{r}
+acs <- acs %>% 
+  mutate(state = as_factor(STATEFIP)) %>% 
+  mutate(service_industry = case_when(
+    OCC2010 %in% 4000:4150 ~ 1,
+    TRUE ~ 0
+  )) %>% 
+  mutate(over_65 = case_when(
+    AGE >= 65 ~ 1, 
+    TRUE ~ 0
+  )) %>% 
+  mutate(black = case_when(
+    RACE == 2 ~ 1,
+    TRUE ~ 0
+  )) %>% 
+  mutate(hispan = case_when(
+    HISPAN != 0 ~ 1,
+    TRUE ~ 0
+  )) %>% 
+  mutate(unemployed = case_when(
+    EMPSTAT == 2 ~ 1,
+    TRUE ~ 0
+  )) %>% 
+  mutate(high_school = case_when(
+    EDUC >= 6 ~ 1,
+    TRUE ~ 0
+))
+```
+
+
+```{r}
+contextual_vars <- acs %>% 
+  group_by(state) %>% 
+  summarize(frac_service_industry = sum(service_industry*PERWT)/sum(PERWT),
+            frac_over_65 = sum(over_65*PERWT)/sum(PERWT),
+            frac_black = sum(black*PERWT)/sum(PERWT),
+            pop = sum(PERWT),
+            frac_hispan = sum(hispan*PERWT)/sum(PERWT),
+            frac_unemployed = sum(unemployed*PERWT)/sum(PERWT),
+            frac_highschool = sum(high_school*PERWT)/sum(PERWT))
+```
+
+
+```{r}
+test <- read_csv("~/Documents/data/ph244/intermediate/test_training_split.csv") %>% 
+  filter(training == 0) %>% 
+  filter(Country_Region == "US") %>% 
+  left_join(contextual_vars, by = c("Province_State" = "state")) %>% 
+  select(ConfirmedCases, geo, days_since_first_case, frac_service_industry, frac_over_65) %>% 
+  drop_na()
+
+train <- read_csv("~/Documents/data/ph244/intermediate/test_training_split.csv") %>% 
+  filter(training == 1) %>% 
+  filter(Country_Region == "US") %>% 
+  left_join(contextual_vars, by = c("Province_State" = "state")) %>% 
+  select(ConfirmedCases, geo, days_since_first_case, frac_service_industry, frac_over_65) %>% 
+  drop_na()
+```
+
+
+```{r}
+glm <- train(ConfirmedCases ~ geo + days_since_first_case,
+             data = train,
+             trControl = fitControl,
+                   method = "glm")
+
+predicted.glm <- predict(glm, newdata = test)
+
+test <- test %>% 
+  mutate(predicted.glm = case_when(
+    predicted.glm < 0 ~ 0,
+    TRUE ~ predicted.glm))
+
+
+RMSLE.gmb1 <-  sqrt(1/nrow(test)*sum((log(test$predicted.glm+1) - log(test$ConfirmedCases+1))^2))
+```
+
+```{r}
+glm.covariates <- train(ConfirmedCases ~ geo + days_since_first_case + frac_service_industry + frac_over_65,
+             data = train,
+             trControl = fitControl,
+                   method = "glm")
+
+predicted.glm.covariates <- predict(glm.covariates, newdata = test)
+
+test <- test %>% 
+  mutate(predicted.glm.covariates = case_when(
+    predicted.glm.covariates < 0 ~ 0,
+    TRUE ~ predicted.glm.covariates))
+
+
+RMSLE.gmb2 <-  sqrt(1/nrow(test)*sum((log(test$predicted.glm.covariates+1) - log(test$ConfirmedCases+1))^2))
+```
+
+```{r}
+caret::varImp(glm.covariates)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

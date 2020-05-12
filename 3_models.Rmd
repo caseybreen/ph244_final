@@ -1,0 +1,116 @@
+---
+title: "Analysis"
+output: html_notebook
+---
+
+Analysis
+
+```{r}
+library(tidyverse)
+library(caret)
+```
+```{r}
+test <- read_csv("~/Documents/data/ph244/intermediate/test_training_split.csv") %>% 
+  filter(training == 0)
+
+train <- read_csv("~/Documents/data/ph244/intermediate/test_training_split.csv") %>% 
+  filter(training == 1)
+```
+
+
+```{r}
+fitControl <- trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           ## repeated ten times
+                           repeats = 1)
+
+gbmFit1 <- train(ConfirmedCases ~ geo + days_since_first_case, data = train, 
+                 method = "gbm", 
+                 trControl = fitControl,
+                 verbose = FALSE)
+
+predicted.gml1 <- predict(gbmFit1, newdata = test)
+
+test <- test %>% 
+  mutate(predicted.gm1 = case_when(
+    predicted.gm1 < 0 ~ 0,
+    TRUE ~ predicted.gm1))
+
+RMSLE.gmb1 <-  sqrt(1/nrow(test)*sum((log(test$predicted+1) - log(test$ConfirmedCases+1))^2))
+```
+
+```{r}
+gbmFit2 <- train(Fatalities ~ geo + days_since_first_fatility, data = train, 
+                 method = "gbm", 
+                 trControl = fitControl,
+                 verbose = FALSE)
+
+predicted.gbm2 <- predict(gbmFit2, newdata = test)
+
+test <- test %>% 
+  mutate(predicted.gbm2 = case_when(
+    predicted.gbm2 < 0 ~ 0,
+    TRUE ~ predicted.gbm2))
+
+RMSLE.gmb2 <-  sqrt(1/nrow(test)*sum((log(test$predicted.gbm2+1) - log(test$Fatalities+1))^2))
+```
+
+
+
+```{r}
+glm <- train(ConfirmedCases ~ geo + days_since_first_case,
+             data = train,
+             trControl = fitControl,
+                   method = "glm")
+
+predicted.glm <- predict(glm, newdata = test)
+
+test <- test %>% 
+  mutate(predicted.glm = case_when(
+    predicted.glm < 0 ~ 0,
+    TRUE ~ predicted.glm))
+
+RMSLE.glm <-  sqrt(1/nrow(test)*sum((log(test$predicted.glm+1) - log(test$ConfirmedCases+1))^2))
+```
+
+
+```{r}
+glm2 <- train(Fatalities ~ geo + days_since_first_fatility,
+              data = train,
+              trControl = fitControl,
+                   method = "glm")
+
+predicted.glm2 <- predict(glm2, newdata = test)
+
+test <- test %>% 
+  mutate(predicted.glm2 = case_when(
+    predicted.glm2 < 0 ~ 0,
+    TRUE ~ predicted.glm2))
+
+RMSLE.glm2 <-  sqrt(1/nrow(test)*sum((log(test$predicted.glm2+1) - log(test$Fatalities+1))^2))
+```
+
+```{r}
+caret::varImp(glm)
+```
+
+
+## Residual Plots
+
+```{r}
+residuals <- test %>% 
+  select(geo, ConfirmedCases, Fatalities, predicted.glm) %>% 
+  mutate(resid = ConfirmedCases -  predicted.gm1)
+
+ggplot(data = residuals) + 
+  geom_point(aes(x = ConfirmedCases, y = resid))
+  
+```
+
+
+
+
+
+
+
